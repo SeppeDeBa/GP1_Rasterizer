@@ -23,6 +23,9 @@ namespace dae
 	{
 		//TODO
 		//Load SDL_Surface using IMG_LOAD
+
+		
+
 		//Create & Return a new Texture Object (using SDL_Surface)
 
 		return nullptr;
