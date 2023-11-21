@@ -27,11 +27,16 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	//Initialize Camera
 	m_Camera.Initialize(60.f, { .0f,.0f,-10.f });
+
+	//init textures
+	m_pTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
+	
 }
 
 Renderer::~Renderer()
 {
 	delete[] m_pDepthBufferPixels;
+	delete m_pTexture;
 }
 
 void Renderer::Update(Timer* pTimer)
@@ -158,7 +163,8 @@ void dae::Renderer::RenderTri(const Vertex& v0, const Vertex& v1, const Vertex& 
 	//TODO: Ask about slide 32, what do types matter besides having to be cast?
 	//2. check if it doesn't exceed screen // offset of 1 according to slide 32
 		//2.1 x check
-	topLeft.x = Clamp((int)topLeft.x, 0, m_Width - 1);
+	//testing if static cast would be better. Doesn't relly matter as the check here is not needed.
+	topLeft.x = Clamp(static_cast<int>(topLeft.x), 0, m_Width - 1);
 	bottomRight.x = Clamp((int)bottomRight.x, 0, m_Width - 1);
 
 	//2.2 y check
@@ -235,6 +241,131 @@ void dae::Renderer::RenderTri(const Vertex& v0, const Vertex& v1, const Vertex& 
 
 					finalColor = v0.color * weightV0 + v1.color * weightV1 + v2.color * weightV2;
 
+					finalColor.MaxToOne();
+
+					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
+						static_cast<uint8_t>(finalColor.r * 255),
+						static_cast<uint8_t>(finalColor.g * 255),
+						static_cast<uint8_t>(finalColor.b * 255));
+				}
+			}
+		}
+	}
+}
+
+void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& v1, const Vertex& v2) const
+{
+	ColorRGB finalColor{ 0,0,0 };
+
+
+	//=== build bbx === slide 32 
+	//1. find top left and right bottom
+		//1.1 vertex 0 and 1
+	Vector2 topLeft{ std::min(v0.position.x, v1.position.x), std::min(v0.position.y, v1.position.y) };
+	Vector2 bottomRight{ std::max(v0.position.x, v1.position.x), std::max(v0.position.y, v1.position.y) };
+	//1.2 vertex 0&1 and 2
+	topLeft = Vector2{ std::min(topLeft.x, v2.position.x), std::min(topLeft.y, v2.position.y) };
+	bottomRight = Vector2{ std::max(bottomRight.x, v2.position.x), std::max(bottomRight.y, v2.position.y) };
+
+
+	//TODO: Ask about slide 32, what do types matter besides having to be cast?
+	//2. check if it doesn't exceed screen // offset of 1 according to slide 32
+		//2.1 x check
+	//testing if static cast would be better. Doesn't relly matter as the check here is not needed.
+	topLeft.x = Clamp(static_cast<int>(topLeft.x), 0, m_Width - 1);
+	bottomRight.x = Clamp((int)bottomRight.x, 0, m_Width - 1);
+
+	//2.2 y check
+	topLeft.y = Clamp((int)topLeft.y, 0, m_Height - 1);
+	bottomRight.y = Clamp((int)bottomRight.y, 0, m_Height - 1);
+
+	//RENDER LOGIC
+	for (int px{ static_cast<int>(topLeft.x) }; px < bottomRight.x; ++px)
+	{
+		for (int py{ static_cast<int>(topLeft.y) }; py < bottomRight.y; ++py)
+		{
+			//define pixelPos with 0.5 offset
+			const Vector2 currentPixel = Vector2{ static_cast<float>(px) + 0.5f,  static_cast<float>(py) + 0.5f };
+
+
+			//sideA Check
+			const Vector2 sideA = Vector2{ v1.position.x - v0.position.x,
+										   v1.position.y - v0.position.y };
+
+			const Vector2 v0ToPixel = Vector2{ currentPixel.x - v0.position.x,
+											   currentPixel.y - v0.position.y };
+			float crossResultSideA{ Vector2::Cross(sideA, v0ToPixel) };
+			float weightV0{ crossResultSideA };
+
+
+			//old system, leaving it only here as a reference, deleting it where it was used later.
+			//now I check at the end if all is larger than 0 to not have to pass a bool around!
+			//if (crossResultSideA < 0)
+			//{
+			//	pixelIsInTriangle = false;
+			//}
+			//else weightV0 = crossResultSideA;
+
+
+
+			//sideB Check
+			const Vector2 sideB = Vector2{ v2.position.x - v1.position.x,
+										   v2.position.y - v1.position.y };
+
+			const Vector2 v1ToPixel = Vector2{ currentPixel.x - v1.position.x,
+													currentPixel.y - v1.position.y };
+			float crossResultSideB{ Vector2::Cross(sideB, v1ToPixel) };
+			float weightV1{ crossResultSideB };
+
+
+			//sideC check
+			const Vector2 sideC = Vector2{ v0.position.x - v2.position.x,
+										   v0.position.y - v2.position.y };
+
+			const Vector2 v2ToPixel = Vector2{ currentPixel.x - v2.position.x,
+													currentPixel.y - v2.position.y };
+			float crossResultSideC{ Vector2::Cross(sideC, v2ToPixel) };
+			float weightV2{ crossResultSideC };
+
+
+			//check if pixel is in triangle
+			if (crossResultSideA > 0 && crossResultSideB > 0 && crossResultSideC > 0)
+			{
+				//all crosses are positive so pixel is in current triangle
+			//calc total weights; (slide 26 reference)
+				const float totalWeight{ weightV0 + weightV1 + weightV2 };
+
+				weightV0 /= totalWeight;
+				weightV1 /= totalWeight;
+				weightV2 /= totalWeight;
+
+				//slide 27-29 interpolate between depth values using barycentric weights
+				/*const float interpolatedDepth = v0.position.z * weightV0 + v1.position.z * weightV1 + v2.position.z * weightV2;*/
+				//slide 21 week 7
+				const float interpolatedDepth =
+					1.f / 
+					((1 / v0.position.z * weightV0) +
+				     (1 / v1.position.z * weightV1) +
+					 (1 / v2.position.z * weightV2));
+					
+					//old interpolatedDepth methodv0.position.z * weightV0 + v1.position.z * weightV1 + v2.position.z * weightV2;
+
+
+
+				//if depth is smaller than what is stored in buffer, overwrite (slide 30)
+				if (interpolatedDepth < m_pDepthBufferPixels[px * m_Height + py]) //Depth test (slide 29)
+				{
+					m_pDepthBufferPixels[px * m_Height + py] = interpolatedDepth; //Depth write (slide 29)
+
+					//finalColor = v0.color * weightV0 + v1.color * weightV1 + v2.color * weightV2;
+
+					const Vector2 interpolatedUV = 
+						(((v0.uv / v0.position.z) * weightV0) +
+						((v1.uv / v1.position.z) * weightV1) +
+						((v2.uv / v2.position.z) * weightV2))
+						* interpolatedDepth;
+
+					finalColor = m_pTexture->Sample(interpolatedUV);
 					finalColor.MaxToOne();
 
 					m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
@@ -813,15 +944,15 @@ void dae::Renderer::WeekTwo()
 	std::vector<Mesh> meshes_world{
 		Mesh{
 			{
-			Vertex{Vector3(-3.f, 3.f, -2.f), colors::White},
-			Vertex{Vector3(0.f, 3.f, -2.f), colors::White},
-			Vertex{Vector3(3.f, 3.f, -2.f), colors::White},
-			Vertex{Vector3(-3.f, 0.f, -2.f), colors::White},
-			Vertex{Vector3(0.f, 0.f, -2.f), colors::White},
-			Vertex{Vector3(3.f, 0.f, -2.f), colors::White},
-			Vertex{Vector3(-3.f, -3.f, -2.f), colors::White},
-			Vertex{Vector3(0.f, -3.f, -2.f), colors::White},
-			Vertex{Vector3(3.f, -3.f, -2.f), colors::White}
+			Vertex{Vector3(-3.f, 3.f, -2.f), colors::White, Vector2(0,0)},
+			Vertex{Vector3(0.f, 3.f, -2.f), colors::White, Vector2(.5f,0)},
+			Vertex{Vector3(3.f, 3.f, -2.f), colors::White, Vector2(1,0)},
+			Vertex{Vector3(-3.f, 0.f, -2.f), colors::White, Vector2(0,.5f)},
+			Vertex{Vector3(0.f, 0.f, -2.f), colors::White, Vector2(.5f, .5f)},
+			Vertex{Vector3(3.f, 0.f, -2.f), colors::White, Vector2(1, .5f)},
+			Vertex{Vector3(-3.f, -3.f, -2.f), colors::White, Vector2(0, 1)},
+			Vertex{Vector3(0.f, -3.f, -2.f), colors::White, Vector2(.5f, 1)},
+			Vertex{Vector3(3.f, -3.f, -2.f), colors::White, Vector2(1,1)}
 			},{
 				3,0,4,1,5,2,
 				2,6,
@@ -854,7 +985,7 @@ void dae::Renderer::WeekTwo()
 				const Vertex v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
 				const Vertex v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
 
-				RenderTri(v0, v1, v2);
+				RenderTriWithCurrTexturePtr(v0, v1, v2);
 			}
 		}
 		else
@@ -867,14 +998,14 @@ void dae::Renderer::WeekTwo()
 					const Vertex v0 = mesh.vertices[mesh.indices[i]];
 					const Vertex v1 = mesh.vertices[mesh.indices[i + 2]];
 					const Vertex v2 = mesh.vertices[mesh.indices[i + 1]];
-					RenderTri(v0, v1, v2);
+					RenderTriWithCurrTexturePtr(v0, v1, v2);
 				}
 				else
 				{
 					const Vertex v0 = mesh.vertices[mesh.indices[i]];
 					const Vertex v1 = mesh.vertices[mesh.indices[i + 1]];
 					const Vertex v2 = mesh.vertices[mesh.indices[i + 2]];
-					RenderTri(v0, v1, v2);
+					RenderTriWithCurrTexturePtr(v0, v1, v2);
 				}
 			}
 		}

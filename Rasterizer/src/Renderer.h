@@ -54,11 +54,12 @@ namespace dae
 
 		float m_AspectRatio{};
 
-
+		//Textures:
+		Texture* m_pTexture{};
 
 		//utility functions:
 		void RenderTri(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
-
+		void RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
 
 		void WeekOneRasterizationOnly(); //part 1, slide 37
 		void WeekOneProjectionStage(); //part 2 slide 38
