@@ -290,12 +290,13 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 
 			//sideA Check
 			const Vector2 sideA = Vector2{ v1.position.x - v0.position.x,
-										   v1.position.y - v0.position.y };
+										   v1.position.y - v0.position.y }; 
+			//todo: check into vector substraction -> overloaded operator - is already implented
 
 			const Vector2 v0ToPixel = Vector2{ currentPixel.x - v0.position.x,
 											   currentPixel.y - v0.position.y };
 			float crossResultSideA{ Vector2::Cross(sideA, v0ToPixel) };
-			float weightV0{ crossResultSideA };
+			float weightV2{ crossResultSideA };
 
 
 			//old system, leaving it only here as a reference, deleting it where it was used later.
@@ -315,7 +316,7 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 			const Vector2 v1ToPixel = Vector2{ currentPixel.x - v1.position.x,
 													currentPixel.y - v1.position.y };
 			float crossResultSideB{ Vector2::Cross(sideB, v1ToPixel) };
-			float weightV1{ crossResultSideB };
+			float weightV0{ crossResultSideB };
 
 
 			//sideC check
@@ -325,7 +326,7 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 			const Vector2 v2ToPixel = Vector2{ currentPixel.x - v2.position.x,
 													currentPixel.y - v2.position.y };
 			float crossResultSideC{ Vector2::Cross(sideC, v2ToPixel) };
-			float weightV2{ crossResultSideC };
+			float weightV1{ crossResultSideC };
 
 
 			//check if pixel is in triangle
@@ -344,9 +345,11 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 				//slide 21 week 7
 				const float interpolatedDepth =
 					1.f / 
-					((1 / v0.position.z * weightV0) +
-				     (1 / v1.position.z * weightV1) +
-					 (1 / v2.position.z * weightV2));
+					(
+						(1 / v0.position.z * weightV0) +
+						(1 / v1.position.z * weightV1) +
+						(1 / v2.position.z * weightV2)
+					);
 					
 					//old interpolatedDepth methodv0.position.z * weightV0 + v1.position.z * weightV1 + v2.position.z * weightV2;
 
@@ -363,7 +366,7 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 						(((v0.uv / v0.position.z) * weightV0) +
 						((v1.uv / v1.position.z) * weightV1) +
 						((v2.uv / v2.position.z) * weightV2))
-						* interpolatedDepth;
+						* interpolatedDepth;	
 
 					finalColor = m_pTexture->Sample(interpolatedUV);
 					finalColor.MaxToOne();
