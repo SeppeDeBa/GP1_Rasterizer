@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Camera.h"
+#include "DataTypes.h"
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -32,8 +33,15 @@ namespace dae
 
 		bool SaveBufferToImage() const;
 
-		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const;
+		//week 1
+		void VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const; 
+		//week 2
 		void MeshTransformationFunction(const std::vector<Mesh>& meshes_in, std::vector<Mesh>& meshes_out) const;
+		//week 3
+		void VertexTransformationFunctionImproved(const std::vector<Vertex>& vertices_in, std::vector<Vertex_Out>& vertices_out, const Matrix& meshWorldMatrix);
+		void ChangeRenderMode();
+
+
 
 
 
@@ -54,22 +62,43 @@ namespace dae
 
 		float m_AspectRatio{};
 
+		//rendering
+		enum class RenderMode
+		{
+			FinalColor,
+			DepthBuffer
+		};
+		RenderMode m_RenderMode{ RenderMode::FinalColor };
+
+
+		//meshes:
+		Mesh m_Mesh{};
 		//Textures:
 		Texture* m_pTexture{};
 
 		//utility functions:
 		void RenderTri(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
 		void RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
+		void RenderTriWeekThree(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2) const;
 
+		//week 1
 		void WeekOneRasterizationOnly(); //part 1, slide 37
 		void WeekOneProjectionStage(); //part 2 slide 38
 		void WeekOneBaryCentricCoordinates();//part 3 slide 39
 		void WeekOneDepthBuffer();//part 4 slide 40
 		void WeekOneBBX();//part 5 slide 41
 	
-
-
+		//week 2
 		void WeekTwo();
 	
+
+		//week 3
+		void WeekThree();
+		//week 3 helper functions
+		void VertexNDCToRaster(Vertex_Out& vertex);
+		float Remap(float valueToRemap, float min, float max) const;
+		void InitMesh();
+		bool isOutsideFrustum(const Vertex_Out& vertex) const;
+		bool isInFrustum(const Vertex_Out& vertex) const;
 	};
 }

@@ -151,9 +151,14 @@ namespace dae {
 
 	Matrix Matrix::CreatePerspectiveFovLH(float fov, float aspect, float zn, float zf)
 	{
-		//TODO W3
-
-		return {};
+		//slide 10 week 8, left handed coordinate system
+		Matrix out{
+			Vector4{1 / (aspect * fov), 0, 0, 0},
+			Vector4{0 ,  1 / fov, 0, 0},
+			Vector4{0 , 0, zf / (zf - zn), 1},
+			Vector4{0 , 0, -(zf * zn) / (zf - zn), 0},
+		};
+		return out;
 	}
 
 	Vector3 Matrix::GetAxisX() const
