@@ -72,11 +72,12 @@ int main(int argc, char* args[])
 			case SDL_KEYUP:
 				if (e.key.keysym.scancode == SDL_SCANCODE_X)
 					takeScreenshot = true;
-				break;
-				if (e.key.keysym.scancode == SDL_SCANCODE_F)
+				if (e.key.keysym.scancode == SDL_SCANCODE_F7)
 				{
+					std::cout << "F7 pressed" << std::endl;
 					pRenderer->ChangeRenderMode();
 				}
+				break;
 			}
 		}
 

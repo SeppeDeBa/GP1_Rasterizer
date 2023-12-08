@@ -131,7 +131,6 @@ namespace dae
 			Diffuse,
 			Specular,
 			Combined
-
 		};
 		ShadingMode m_ShadingMode{ ShadingMode::Diffuse };
 

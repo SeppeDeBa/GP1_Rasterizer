@@ -29,7 +29,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_Camera.Initialize(m_AspectRatio, 60.f, { .0f,.0f,-10.f });
 
 	//init textures
-	m_pTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
+	m_pTexture = Texture::LoadFromFile("Resources/vehicle_diffuse.png");
 	m_pNormalMap = Texture::LoadFromFile("Resources/vehicle_normal.png");
 	m_pSpecularMap = Texture::LoadFromFile("Resources/vehicle_specular.png");
 	m_pPhongExponentMap = Texture::LoadFromFile("Resources/vehicle_gloss.png");
@@ -189,6 +189,7 @@ void dae::Renderer::VertexTransformationFunctionImproved(const std::vector<Verte
 		vertices_out[i].uv = vertices_in[i].uv;
 		vertices_out[i].normal = meshWorldMatrix.TransformVector(vertices_in[i].normal).Normalized(); //Normal and tangent in world space
 		vertices_out[i].tangent = meshWorldMatrix.TransformVector(vertices_in[i].tangent).Normalized();
+		vertices_out[i].viewDirection = (meshWorldMatrix.TransformPoint(vertices_in[i].position) - m_Camera.origin).Normalized();
 		//TODO Add direction when added to dataTypes
 	}
 
@@ -1527,7 +1528,7 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	}
 	//slide 6 and onwards:
 	//observed area
-	float cosineLaw{ Vector3::Dot(normalSample, -m_MainLight.location) };
+	float cosineLaw{ std::max(Vector3::Dot(normalSample, -m_MainLight.location),0.f) };//todo check if max is fine
 	cosineLaw = Saturate(cosineLaw);
 
 	//sanple diffuse
@@ -1542,19 +1543,23 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	//fix Z
 	const float zDELTA{ 0.005f };
 	const float remapDepth{ Remap(v.position.z, 1.f - zDELTA, 1.f) };
+	// const Vector3 OAVector{ cosineLaw, cosineLaw, cosineLaw }; //for ease of use
+
 	switch (m_ShadingMode)
 	{
 	case dae::Renderer::ShadingMode::ObservedArea: //observedArea
+	{
 		shadedColor = { cosineLaw, cosineLaw, cosineLaw };
+	}
 		break;
 	case dae::Renderer::ShadingMode::Diffuse: //depth
-		shadedColor = { cosineLaw, cosineLaw, cosineLaw };
+		shadedColor = diffuse * cosineLaw * m_MainLight.intensity;
 		break;
 	case dae::Renderer::ShadingMode::Specular: //phong
-		shadedColor = phongColor;
+		shadedColor = phongColor * cosineLaw;
 		break;
 	case dae::Renderer::ShadingMode::Combined:
-		shadedColor = m_MainLight.intensity * diffuse * cosineLaw * phongColor + m_MainLight.color;
+		shadedColor = diffuse * cosineLaw * m_MainLight.intensity + phongColor + m_MainLight.color;
 		break;
 	default:
 		std::cout << "Hit a non existing shadingMode in Renderer" << std::endl;

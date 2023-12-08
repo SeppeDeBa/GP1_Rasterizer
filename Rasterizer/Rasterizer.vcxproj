@@ -141,6 +141,7 @@ xcopy "$(ProjectDir)Resources\" "$(OutDir)\Resources\" /y /D</Command>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../include/vld;../Library/src;../include/SDL2-2.28.3;../include/SDL2_image-2.6.3;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <FloatingPointModel>Precise</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
