@@ -91,6 +91,8 @@ void Renderer::Render()
 	SDL_UpdateWindowSurface(m_pWindow);
 }
 
+//===== old functions start here =====
+#pragma region oldWeeks
 void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vertices_in, std::vector<Vertex>& vertices_out) const
 {
 	//Todo DONE > W1 Projection Stage
@@ -1331,6 +1333,9 @@ void dae::Renderer::WeekThree()
 
 }
 
+#pragma endregion 
+//===== old functions end here =====
+
 void dae::Renderer::VertexNDCToRaster(Vertex_Out& vertex)
 {
 	vertex.position.x = (vertex.position.x + 1) / 2.f * m_Width;
@@ -1590,7 +1595,7 @@ ColorRGB dae::Renderer::Phong(float specularity, float exp, const Vector3& l, co
 	return phongColor;
 }
 
-void dae::Renderer::FinalVersion()
+void dae::Renderer::FinalVersion() //tweaked version of week 3
 {
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
 	SDL_FillRect(m_pBackBuffer, &m_pBackBuffer->clip_rect, 100);
@@ -1612,19 +1617,16 @@ void dae::Renderer::FinalVersion()
 			Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i * 3 + 1]];
 			Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i * 3 + 2]];
 
-			if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
-			if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
-			if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+			if (isOutsideFrustum(v0)) continue;
+			if (isOutsideFrustum(v1)) continue;
+			if (isOutsideFrustum(v2)) continue;
+			
 
 			//NDC to raster space
-			v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
-			v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
-
-			v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
-			v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
-
-			v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
-			v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+			VertexNDCToRaster(v0);
+			VertexNDCToRaster(v1);
+			VertexNDCToRaster(v2);
 
 			RenderTriangleFinalVersion(v0, v1, v2);
 		}
@@ -1639,19 +1641,16 @@ void dae::Renderer::FinalVersion()
 				Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i + 2]];
 				Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i + 1]];
 
-				if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
-				if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
-				if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+				if (isOutsideFrustum(v0)) continue;
+				if (isOutsideFrustum(v1)) continue;
+				if (isOutsideFrustum(v2)) continue;
+
 
 				//NDC to raster space
-				v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
-				v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
-
-				v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
-				v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
-
-				v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
-				v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+				VertexNDCToRaster(v0);
+				VertexNDCToRaster(v1);
+				VertexNDCToRaster(v2);
 
 				RenderTriangleFinalVersion(v0, v1, v2);
 			}
@@ -1661,19 +1660,16 @@ void dae::Renderer::FinalVersion()
 				Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i + 1]];
 				Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i + 2]];
 
-				if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
-				if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
-				if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+				if (isOutsideFrustum(v0)) continue;
+				if (isOutsideFrustum(v1)) continue;
+				if (isOutsideFrustum(v2)) continue;
+
 
 				//NDC to raster space
-				v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
-				v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
-
-				v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
-				v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
-
-				v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
-				v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+				VertexNDCToRaster(v0);
+				VertexNDCToRaster(v1);
+				VertexNDCToRaster(v2);
 
 				RenderTriangleFinalVersion(v0, v1, v2);
 			}
@@ -1683,6 +1679,7 @@ void dae::Renderer::FinalVersion()
 
 
 }
+
 
 void dae::Renderer::ChangeRenderMode()
 {	

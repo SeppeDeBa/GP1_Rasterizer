@@ -98,19 +98,19 @@ namespace dae
 			//assert(false && "Not Implemented Yet");
 
 			//movement
-			if (pKeyboardState[SDL_SCANCODE_W])
+			if (pKeyboardState[SDL_SCANCODE_W] || pKeyboardState[SDL_SCANCODE_UP])
 			{
 				origin += forward * movementSpeed;
 			}
-			else if (pKeyboardState[SDL_SCANCODE_S])
+			else if (pKeyboardState[SDL_SCANCODE_S] || pKeyboardState[SDL_SCANCODE_DOWN])
 			{
 				origin -= forward * movementSpeed;
 			}
-			else if (pKeyboardState[SDL_SCANCODE_A])
+			else if (pKeyboardState[SDL_SCANCODE_A] || pKeyboardState[SDL_SCANCODE_LEFT])
 			{
 				origin -= right * movementSpeed;
 			}
-			else if (pKeyboardState[SDL_SCANCODE_D])
+			else if (pKeyboardState[SDL_SCANCODE_D] || pKeyboardState[SDL_SCANCODE_RIGHT])
 			{
 				origin += right * movementSpeed;
 			}

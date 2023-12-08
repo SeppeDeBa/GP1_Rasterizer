@@ -99,7 +99,7 @@ namespace dae
 	
 
 		//week 3
-		//got kind of stuck, fully reworking in final version. Frustum culling works, rendering did not
+		//got kind of stuck, fully reworking in final version. Frustum culling works
 		void WeekThree();
 		//week 3 helper functions
 		void VertexNDCToRaster(Vertex_Out& vertex);
