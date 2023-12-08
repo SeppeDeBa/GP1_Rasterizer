@@ -26,8 +26,8 @@ namespace dae
 		float aspectRatio{};
 
 		//frustrum
-		const float nearPlane{ 1.f };
-		const float farPlane{ 1000.f };
+		const float nearPlane{ 0.1f };
+		const float farPlane{ 100.f };
 
 		Vector3 forward{Vector3::UnitZ};
 		Vector3 up{Vector3::UnitY};

@@ -45,7 +45,7 @@ namespace dae
 
 		void ToggleNormalMap() { m_UseNormalMap = !m_UseNormalMap; };
 		void ToggleRotation() { m_Rotate = !m_Rotate; };
-
+		void ToggleDepthBuffer() { m_DepthBuffer = !m_DepthBuffer; };
 
 
 	private:
@@ -118,10 +118,11 @@ namespace dae
 
 		bool m_UseNormalMap{ true };
 		bool m_Rotate{ true };
+		bool m_DepthBuffer{ false };
 		const float m_RotationSpeed{ 1.f };
 
 		
-		Light m_MainLight{Vector3{.577f, -.577f, .577f}};
+		Light m_DirectionalLight{Vector3{.577f, -.577f, .577f}};
 		//old :Light m_MainLight{ 7.f, Vector3{.577f, -.577f, .577f}, ColorRGB{.025f, .025f, .025f} };
 
 		ColorRGB PixelShading(const Vertex_Out& v) const;

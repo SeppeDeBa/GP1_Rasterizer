@@ -26,7 +26,10 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
 
 	//Initialize Camera
-	m_Camera.Initialize(m_AspectRatio, 60.f, { .0f,.0f,-10.f });
+	m_Camera.Initialize(m_AspectRatio, 45.f, { .0f,.5f,-64.f });
+
+	//light variabls
+	m_AmbientColor = { 0.3f, 0.3f, 0.3f };//already set to this but repeating it just for clarity
 
 	//init textures
 	m_pTexture = Texture::LoadFromFile("Resources/vehicle_diffuse.png");
@@ -1340,7 +1343,7 @@ void dae::Renderer::InitMesh()
 	//Parse object to m_Mesh
 	Utils::ParseOBJ("Resources/vehicle.obj", m_Mesh.vertices, m_Mesh.indices); //W3
 
-	const Vector3 position{ Vector3{0.f, 0.f, 50.f} };
+	const Vector3 position{ Vector3{0.f, 0.f, 0.f} };
 	const Vector3 rotation{ };
 	const Vector3 scale{ Vector3{ 1.f, 1.f, 1.f } };
 	m_Mesh.worldMatrix = Matrix::CreateScale(scale) * Matrix::CreateRotation(rotation) * Matrix::CreateTranslation(position);
@@ -1528,7 +1531,7 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	}
 	//slide 6 and onwards:
 	//observed area
-	float observedArea{ std::max(Vector3::Dot(normalSample, -m_MainLight.location),0.f) };//todo check if max is fine
+	float observedArea{ std::max(Vector3::Dot(normalSample, -m_DirectionalLight.location),0.f) };//todo check if max is fine
 	observedArea = Saturate(observedArea);
 
 	//sanple diffuse
@@ -1538,13 +1541,16 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	const float specularity = m_pSpecularMap->Sample(v.uv).r;
 	const float phongExponent = m_pPhongExponentMap->Sample(v.uv).r * PhongShininess;
 
-	const ColorRGB phongColor = Phong(specularity, phongExponent, -m_MainLight.location, v.viewDirection, normalSample);
+	const ColorRGB phongColor = Phong(specularity, phongExponent, -m_DirectionalLight.location, v.viewDirection, normalSample);
 
 	//fix Z
+	//slide 22 week 8
 	const float zDELTA{ 0.005f };
 	const float remapDepth{ Remap(v.position.z, 1.f - zDELTA, 1.f) };
 	// const Vector3 OAVector{ cosineLaw, cosineLaw, cosineLaw }; //for ease of use
 
+
+	if (!m_DepthBuffer)
 	switch (m_ShadingMode)
 	{
 	case dae::Renderer::ShadingMode::ObservedArea: //observedArea
@@ -1565,6 +1571,11 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 		std::cout << "Hit a non existing shadingMode in Renderer" << std::endl;
 		break;
 	}
+	else
+	{
+		shadedColor = { remapDepth, remapDepth, remapDepth };
+	}
+
 
 	return shadedColor;
 }
