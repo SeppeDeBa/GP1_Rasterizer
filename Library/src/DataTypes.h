@@ -42,8 +42,10 @@ namespace dae
 
 	struct Light
 	{
-		float intensity{};
+		//float intensity{};
 		Vector3 location{}; //can also be interpreted as direction
-		ColorRGB color{};
+		//ColorRGB color{};
+
+		//removed intensity and color as we use KD and AmbientColor in Renderer itself.
 	};
 }

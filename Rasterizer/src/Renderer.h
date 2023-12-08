@@ -43,6 +43,8 @@ namespace dae
 
 
 
+		void ToggleNormalMap() { m_UseNormalMap = !m_UseNormalMap; };
+		void ToggleRotation() { m_Rotate = !m_Rotate; };
 
 
 
@@ -115,13 +117,12 @@ namespace dae
 
 
 		bool m_UseNormalMap{ true };
-		void ToggleNormalMap() { m_UseNormalMap = !m_UseNormalMap; };
 		bool m_Rotate{ true };
 		const float m_RotationSpeed{ 1.f };
-		void ToggleRotation() { m_Rotate = !m_Rotate; };
 
 		
-		Light m_MainLight{ 7.f, Vector3{.577f, -.577f, .577f}, ColorRGB{.025f, .025f, .025f} };
+		Light m_MainLight{Vector3{.577f, -.577f, .577f}};
+		//old :Light m_MainLight{ 7.f, Vector3{.577f, -.577f, .577f}, ColorRGB{.025f, .025f, .025f} };
 
 		ColorRGB PixelShading(const Vertex_Out& v) const;
 		
@@ -132,9 +133,9 @@ namespace dae
 			Specular,
 			Combined
 		};
-		ShadingMode m_ShadingMode{ ShadingMode::Diffuse };
-
-
+		ShadingMode m_ShadingMode{ ShadingMode::Combined};
+		const float m_DiffuseKD{ 7.f };
+		ColorRGB m_AmbientColor{ 0.3f,0.3f,0.3f };
 
 
 		//slide 12

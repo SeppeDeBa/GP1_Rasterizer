@@ -1528,11 +1528,11 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	}
 	//slide 6 and onwards:
 	//observed area
-	float cosineLaw{ std::max(Vector3::Dot(normalSample, -m_MainLight.location),0.f) };//todo check if max is fine
-	cosineLaw = Saturate(cosineLaw);
+	float observedArea{ std::max(Vector3::Dot(normalSample, -m_MainLight.location),0.f) };//todo check if max is fine
+	observedArea = Saturate(observedArea);
 
 	//sanple diffuse
-	const ColorRGB diffuse = m_pTexture->Sample(v.uv) / PI;
+	const ColorRGB diffuse = m_pTexture->Sample(v.uv) * m_DiffuseKD / PI;
 
 	//Phong
 	const float specularity = m_pSpecularMap->Sample(v.uv).r;
@@ -1549,17 +1549,17 @@ ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
 	{
 	case dae::Renderer::ShadingMode::ObservedArea: //observedArea
 	{
-		shadedColor = { cosineLaw, cosineLaw, cosineLaw };
+		shadedColor = { observedArea, observedArea, observedArea };
 	}
 		break;
 	case dae::Renderer::ShadingMode::Diffuse: //depth
-		shadedColor = diffuse * cosineLaw * m_MainLight.intensity;
+		shadedColor = diffuse * observedArea /** m_MainLight.intensity*/;
 		break;
 	case dae::Renderer::ShadingMode::Specular: //phong
-		shadedColor = phongColor * cosineLaw;
+		shadedColor = phongColor * observedArea;
 		break;
 	case dae::Renderer::ShadingMode::Combined:
-		shadedColor = diffuse * cosineLaw * m_MainLight.intensity + phongColor + m_MainLight.color;
+		shadedColor = diffuse * observedArea /** m_MainLight.intensity*/ + phongColor * m_AmbientColor/* m_MainLight.color*/;
 		break;
 	default:
 		std::cout << "Hit a non existing shadingMode in Renderer" << std::endl;
