@@ -73,7 +73,7 @@ int main(int argc, char* args[])
 				if (e.key.keysym.scancode == SDL_SCANCODE_X)
 					takeScreenshot = true;
 				break;
-				if (e.key.keysym.scancode == SDL_SCANCODE_F4)
+				if (e.key.keysym.scancode == SDL_SCANCODE_F)
 				{
 					pRenderer->ChangeRenderMode();
 				}

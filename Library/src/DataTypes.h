@@ -11,7 +11,7 @@ namespace dae
 		Vector2 uv{}; //W2
 		Vector3 normal{}; //W4
 		Vector3 tangent{}; //W4
-		//Vector3 viewDirection{}; //W4
+		Vector3 viewDirection{}; //W4
 	};
 
 	struct Vertex_Out
@@ -21,7 +21,7 @@ namespace dae
 		Vector2 uv{};
 		Vector3 normal{};
 		Vector3 tangent{};
-		//Vector3 viewDirection{};
+		Vector3 viewDirection{};
 	};
 
 	enum class PrimitiveTopology
@@ -38,5 +38,12 @@ namespace dae
 
 		std::vector<Vertex_Out> vertices_out{};
 		Matrix worldMatrix{};
+	};
+
+	struct Light
+	{
+		float intensity{};
+		Vector3 location{}; //can also be interpreted as direction
+		ColorRGB color{};
 	};
 }

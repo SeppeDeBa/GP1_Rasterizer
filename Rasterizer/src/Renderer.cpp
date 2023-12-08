@@ -7,7 +7,7 @@
 #include "Maths.h"
 #include "Texture.h"
 #include "Utils.h"
-
+#include <iostream>
 
 
 using namespace dae;
@@ -30,18 +30,28 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	//init textures
 	m_pTexture = Texture::LoadFromFile("Resources/uv_grid_2.png");
-	
+	m_pNormalMap = Texture::LoadFromFile("Resources/vehicle_normal.png");
+	m_pSpecularMap = Texture::LoadFromFile("Resources/vehicle_specular.png");
+	m_pPhongExponentMap = Texture::LoadFromFile("Resources/vehicle_gloss.png");
+	InitMesh();
 }
 
 Renderer::~Renderer()
 {
 	delete[] m_pDepthBufferPixels;
 	delete m_pTexture;
+	delete m_pNormalMap;
+	delete m_pSpecularMap;
+	delete m_pPhongExponentMap;
 }
 
 void Renderer::Update(Timer* pTimer)
 {
 	m_Camera.Update(pTimer);
+	if (m_Rotate)
+	{
+		m_Mesh.worldMatrix = Matrix::CreateRotationY(m_RotationSpeed * pTimer->GetElapsed()) * m_Mesh.worldMatrix;
+	}
 }
 
 void Renderer::Render()
@@ -64,7 +74,13 @@ void Renderer::Render()
 
 
 	//===== week 3 =====
-	WeekThree();
+	//WeekThree();
+	
+	
+	
+	//===== final version =====
+	FinalVersion();
+	
 	//@END
 	//Update SDL Surface
 	SDL_UnlockSurface(m_pBackBuffer);
@@ -382,9 +398,9 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 				const float interpolatedDepth =
 					1.f / 
 					(
-						(1 / v0.position.z * weightV0) +
-						(1 / v1.position.z * weightV1) +
-						(1 / v2.position.z * weightV2)
+						((1 / v0.position.z) * weightV0) +
+						((1 / v1.position.z) * weightV1) +
+						((1 / v2.position.z) * weightV2)
 					);
 					
 					//old interpolatedDepth methodv0.position.z * weightV0 + v1.position.z * weightV1 + v2.position.z * weightV2;
@@ -403,7 +419,7 @@ void dae::Renderer::RenderTriWithCurrTexturePtr(const Vertex& v0, const Vertex& 
 							((v0.uv / v0.position.z) * weightV0) +
 							((v1.uv / v1.position.z) * weightV1) +
 							((v2.uv / v2.position.z) * weightV2)
-							)
+						)
 						* interpolatedDepth;	
 
 					finalColor = m_pTexture->Sample(interpolatedUV);
@@ -1159,6 +1175,7 @@ void dae::Renderer::WeekTwo()
 	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
 	SDL_FillRect(m_pBackBuffer, &m_pBackBuffer->clip_rect, 100);
 
+	//clear world background
 	ColorRGB clearColor = ColorRGB{ 100,100,100 };
 	Uint32 clearColorUint = 0xFF000000 | (Uint32)clearColor.r | (Uint32)clearColor.g << 8 | (Uint32)clearColor.b << 16;
 	SDL_FillRect(m_pBackBuffer, NULL, clearColorUint);
@@ -1320,7 +1337,7 @@ void dae::Renderer::VertexNDCToRaster(Vertex_Out& vertex)
 void dae::Renderer::InitMesh()
 {
 	//Parse object to m_Mesh
-	Utils::ParseOBJ("Resources/tuktuk.obj", m_Mesh.vertices, m_Mesh.indices); //W3
+	Utils::ParseOBJ("Resources/vehicle.obj", m_Mesh.vertices, m_Mesh.indices); //W3
 
 	const Vector3 position{ Vector3{0.f, 0.f, 50.f} };
 	const Vector3 rotation{ };
@@ -1352,18 +1369,342 @@ bool dae::Renderer::isInFrustum(const Vertex_Out& vertex) const
 	return !isOutsideFrustum(vertex);
 }
 
-void dae::Renderer::ChangeRenderMode()
-{	
-	switch (m_RenderMode)
+void dae::Renderer::RenderTriangleFinalVersion(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2) const
+{
+
+	ColorRGB finalColor{  };
+
+	//checking if pixel is in triangle
+	//Bounding box
+	Vector2 topLeft{ std::min(v0.position.x - 1 , v1.position.x - 1), std::min(v0.position.y - 1, v1.position.y - 1) };
+	Vector2 bottomRight{ std::max(v0.position.x + 1, v1.position.x + 1), std::max(v0.position.y + 1, v1.position.y + 1) };
+
+	topLeft = Vector2{ std::min(topLeft.x - 1, v2.position.x - 1), std::min(topLeft.y - 1, v2.position.y - 1) };
+	bottomRight = Vector2{ std::max(bottomRight.x + 1, v2.position.x + 1), std::max(bottomRight.y + 1, v2.position.y + 1) };
+
+	topLeft.x = Clamp((int)topLeft.x, 0, m_Width - 1);
+	bottomRight.x = Clamp((int)bottomRight.x, 0, m_Width - 1);
+	topLeft.y = Clamp((int)topLeft.y, 0, m_Height - 1);
+	bottomRight.y = Clamp((int)bottomRight.y, 0, m_Height - 1);
+
+	for (int py{ int(topLeft.y) }; py < bottomRight.y; ++py)
 	{
-	case dae::Renderer::RenderMode::FinalColor:
-		m_RenderMode = RenderMode::DepthBuffer;
+		for (int px{ int(topLeft.x) }; px < bottomRight.x; ++px)
+		{
+			const Vector2 pixelPos = Vector2{ (float)px, (float)py };
+
+			//side A cross check
+			const Vector2 sideA = Vector2{ v1.position.x - v0.position.x,
+										   v1.position.y - v0.position.y };
+
+			const Vector2 vertex1ToPixel = Vector2{ pixelPos.x - v0.position.x,
+													pixelPos.y - v0.position.y };
+
+			const float crossA{ Vector2::Cross(sideA, vertex1ToPixel) };
+
+			if (crossA < 0) continue;
+
+			//side B cross check
+			const Vector2 sideB = Vector2{ v2.position.x - v1.position.x,
+										   v2.position.y - v1.position.y };
+
+			const Vector2 vertex2ToPixel = Vector2{ pixelPos.x - v1.position.x,
+													pixelPos.y - v1.position.y };
+
+			const float crossB{ Vector2::Cross(sideB, vertex2ToPixel) };
+
+			if (crossB < 0) continue;
+
+			//side C cross check
+			const Vector2 sideC = Vector2{ v0.position.x - v2.position.x,
+										   v0.position.y - v2.position.y };
+
+			const Vector2 vertex3ToPixel = Vector2{ pixelPos.x - v2.position.x,
+													pixelPos.y - v2.position.y };
+
+			const float crossC{ Vector2::Cross(sideC, vertex3ToPixel) };
+
+			if (crossC < 0) continue;
+
+			//pixel is in triangle		
+			float weight2 = crossA;
+			float weight0 = crossB;
+			float weight1 = crossC;
+
+			const float totalWeight{ weight0 + weight1 + weight2 };
+
+			weight0 /= totalWeight;
+			weight1 /= totalWeight;
+			weight2 /= totalWeight;
+
+			//const float interpolatedDepth = v0.position.z * weight0 + v1.position.z * weight1 + v2.position.z * weight2; //Linear
+			const float interpolatedZDepth = 1.f /
+				(
+					(1.f / v0.position.z) * weight0 +
+					(1.f / v1.position.z) * weight1 +
+					(1.f / v2.position.z) * weight2
+					); //Quadratic-ish?
+
+			if (interpolatedZDepth < 0 || interpolatedZDepth > 1) continue; //Interpolated depth not in [0,1] range, frustrum culling for z
+
+			if (m_pDepthBufferPixels[px * m_Height + py] < interpolatedZDepth) continue; //Depth test
+
+			m_pDepthBufferPixels[px * m_Height + py] = interpolatedZDepth; //Depth write
+
+			//const Vector2 interpolatedUV = v0.uv * weight0 + v1.uv * weight1 + v2.uv * weight2; //Linear
+			const float	interpolatedWDepth = 1.f /
+				(
+					(1.f / v0.position.w) * weight0 +
+					(1.f / v1.position.w) * weight1 +
+					(1.f / v2.position.w) * weight2
+					); //Quadratic-ish?
+
+			const Vector2 interpolatedUV = (((v0.uv / v0.position.w) * weight0) +
+				((v1.uv / v1.position.w) * weight1) +
+				((v2.uv / v2.position.w) * weight2))
+				* interpolatedWDepth;
+
+			Vertex_Out outputPixel;
+			outputPixel.position = Vector4{ pixelPos.x, pixelPos.y, interpolatedZDepth, interpolatedWDepth };
+
+			outputPixel.uv = interpolatedUV;
+
+			outputPixel.color = (((v0.color / v0.position.w) * weight0) +
+				((v1.color / v1.position.w) * weight1) +
+				((v2.color / v2.position.w) * weight2))
+				* interpolatedWDepth;
+
+			outputPixel.normal = ((((v0.normal / v0.position.w) * weight0) +
+				((v1.normal / v1.position.w) * weight1) +
+				((v2.normal / v2.position.w) * weight2))
+				* interpolatedWDepth).Normalized();
+
+			outputPixel.tangent = ((((v0.tangent / v0.position.w) * weight0) +
+				((v1.tangent / v1.position.w) * weight1) +
+				((v2.tangent / v2.position.w) * weight2))
+				* interpolatedWDepth).Normalized();
+
+			outputPixel.viewDirection = ((((v0.viewDirection / v0.position.w) * weight0) +
+				((v1.viewDirection / v1.position.w) * weight1) +
+				((v2.viewDirection / v2.position.w) * weight2))
+				* interpolatedWDepth).Normalized();
+
+			finalColor = PixelShading(outputPixel);
+
+			finalColor.MaxToOne();
+
+			m_pBackBufferPixels[px + (py * m_Width)] = SDL_MapRGB(m_pBackBuffer->format,
+				static_cast<uint8_t>(finalColor.r * 255),
+				static_cast<uint8_t>(finalColor.g * 255),
+				static_cast<uint8_t>(finalColor.b * 255));
+
+		}
+	}
+
+}
+
+ColorRGB dae::Renderer::PixelShading(const Vertex_Out& v) const
+{
+	ColorRGB shadedColor{};
+	Vector3 normalSample{ v.normal };
+
+	if (m_UseNormalMap)
+	{
+		//slide 12 week 9
+		const Vector3 binormal = Vector3::Cross(normalSample, v.tangent);
+		const Matrix tangentSpaceAxis{ v.tangent, binormal, v.normal, {0,0,0} };
+		const ColorRGB normalColor = m_pNormalMap->Sample(v.uv);
+
+		//bottom slide 19, 255 division happens in Sample
+		normalSample.x = 2.f * normalColor.r - 1.f;
+		normalSample.y = 2.f * normalColor.g - 1.f;
+		normalSample.z = 2.f * normalColor.b - 1.f;
+
+		normalSample = tangentSpaceAxis.TransformVector(normalSample);
+
+		//slide 4, make sure to norm later
+		normalSample.Normalize();
+	}
+	//slide 6 and onwards:
+	//observed area
+	float cosineLaw{ Vector3::Dot(normalSample, -m_MainLight.location) };
+	cosineLaw = Saturate(cosineLaw);
+
+	//sanple diffuse
+	const ColorRGB diffuse = m_pTexture->Sample(v.uv) / PI;
+
+	//Phong
+	const float specularity = m_pSpecularMap->Sample(v.uv).r;
+	const float phongExponent = m_pPhongExponentMap->Sample(v.uv).r * PhongShininess;
+
+	const ColorRGB phongColor = Phong(specularity, phongExponent, -m_MainLight.location, v.viewDirection, normalSample);
+
+	//fix Z
+	const float zDELTA{ 0.005f };
+	const float remapDepth{ Remap(v.position.z, 1.f - zDELTA, 1.f) };
+	switch (m_ShadingMode)
+	{
+	case dae::Renderer::ShadingMode::ObservedArea: //observedArea
+		shadedColor = { cosineLaw, cosineLaw, cosineLaw };
 		break;
-	case dae::Renderer::RenderMode::DepthBuffer:
-		m_RenderMode = RenderMode::FinalColor;
+	case dae::Renderer::ShadingMode::Diffuse: //depth
+		shadedColor = { cosineLaw, cosineLaw, cosineLaw };
+		break;
+	case dae::Renderer::ShadingMode::Specular: //phong
+		shadedColor = phongColor;
+		break;
+	case dae::Renderer::ShadingMode::Combined:
+		shadedColor = m_MainLight.intensity * diffuse * cosineLaw * phongColor + m_MainLight.color;
+		break;
+	default:
+		std::cout << "Hit a non existing shadingMode in Renderer" << std::endl;
 		break;
 	}
 
+	return shadedColor;
+}
+
+ColorRGB dae::Renderer::Phong(float specularity, float exp, const Vector3& l, const Vector3& v, const Vector3& n) const
+{
+	const Vector3 reflection = Vector3::Reflect(l, n);
+	const float cosAlpha = std::max(0.f, Vector3::Dot(reflection, v));
+	const float value = specularity * powf(cosAlpha, exp);
+	ColorRGB phongColor{ value, value, value };
+
+	return phongColor;
+}
+
+void dae::Renderer::FinalVersion()
+{
+	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, FLT_MAX);
+	SDL_FillRect(m_pBackBuffer, &m_pBackBuffer->clip_rect, 100);
+
+	ColorRGB clearColor = ColorRGB{ 100,100,100 };
+	Uint32 clearColorUint = 0xFF000000 | (Uint32)clearColor.r | (Uint32)clearColor.g << 8 | (Uint32)clearColor.b << 16;
+	SDL_FillRect(m_pBackBuffer, NULL, clearColorUint);
+
+	//RENDER LOGIC
+
+	//convert to screen space
+	VertexTransformationFunctionImproved(m_Mesh.vertices, m_Mesh.vertices_out, m_Mesh.worldMatrix);
+
+	if (m_Mesh.primitiveTopology == PrimitiveTopology::TriangleList)
+	{
+		for (int i{}; i < m_Mesh.indices.size() / 3; ++i)
+		{
+			Vertex_Out v0 = m_Mesh.vertices_out[m_Mesh.indices[i * 3]];
+			Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i * 3 + 1]];
+			Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i * 3 + 2]];
+
+			if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
+			if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
+			if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+			//NDC to raster space
+			v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
+			v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
+
+			v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
+			v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
+
+			v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
+			v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+
+			RenderTriangleFinalVersion(v0, v1, v2);
+		}
+	}
+	else
+	{
+		for (int i{}; i < m_Mesh.indices.size() - 2; ++i)
+		{
+			if (i % 2 != 0)
+			{
+				Vertex_Out v0 = m_Mesh.vertices_out[m_Mesh.indices[i]];
+				Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i + 2]];
+				Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i + 1]];
+
+				if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
+				if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
+				if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+				//NDC to raster space
+				v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
+				v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
+
+				v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
+				v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
+
+				v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
+				v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+
+				RenderTriangleFinalVersion(v0, v1, v2);
+			}
+			else
+			{
+				Vertex_Out v0 = m_Mesh.vertices_out[m_Mesh.indices[i]];
+				Vertex_Out v1 = m_Mesh.vertices_out[m_Mesh.indices[i + 1]];
+				Vertex_Out v2 = m_Mesh.vertices_out[m_Mesh.indices[i + 2]];
+
+				if ((v0.position.x < -1 || v0.position.x > 1) || (v0.position.y < -1 || v0.position.y > 1)) continue;
+				if ((v1.position.x < -1 || v1.position.x > 1) || (v1.position.y < -1 || v1.position.y > 1)) continue;
+				if ((v2.position.x < -1 || v2.position.x > 1) || (v2.position.y < -1 || v2.position.y > 1)) continue;
+
+				//NDC to raster space
+				v0.position.x = (v0.position.x + 1) / 2.f * m_Width;
+				v0.position.y = (1 - v0.position.y) / 2.f * m_Height;
+
+				v1.position.x = (v1.position.x + 1) / 2.f * m_Width;
+				v1.position.y = (1 - v1.position.y) / 2.f * m_Height;
+
+				v2.position.x = (v2.position.x + 1) / 2.f * m_Width;
+				v2.position.y = (1 - v2.position.y) / 2.f * m_Height;
+
+				RenderTriangleFinalVersion(v0, v1, v2);
+			}
+		}
+	}
+
+
+
+}
+
+void dae::Renderer::ChangeRenderMode()
+{	
+	std::cout << "changing render mode" << std::endl;
+ //older code from earlier versions
+ // leaving in to still make older tests and versions work!
+	//switch (m_RenderMode)
+	//{
+	//case dae::Renderer::RenderMode::FinalColor:
+	//	m_RenderMode = RenderMode::DepthBuffer;
+	//	break;
+	//case dae::Renderer::RenderMode::DepthBuffer:
+	//	m_RenderMode = RenderMode::FinalColor;
+	//	break;
+	//}
+
+	switch (m_ShadingMode)
+	{
+	case dae::Renderer::ShadingMode::ObservedArea:
+		std::cout << "Shading set to Diffuse" << std::endl;
+		m_ShadingMode = ShadingMode::Diffuse;
+		break;
+	case dae::Renderer::ShadingMode::Diffuse:
+		std::cout << "Shading set to Specular" << std::endl;
+		m_ShadingMode = ShadingMode::Specular;
+		break;
+	case dae::Renderer::ShadingMode::Specular:
+		std::cout << "Shading set to Combined" << std::endl;
+		m_ShadingMode = ShadingMode::Combined;
+		break;
+	case dae::Renderer::ShadingMode::Combined:
+		std::cout << "Shading set to ObservedArea" << std::endl;
+		m_ShadingMode = ShadingMode::ObservedArea;
+		break;
+	default:
+		std::cout << "Default has been hit in ChangeRenderMode() m_ShadingMode " << std::endl;
+		break;
+	}
 }
 
 float dae::Renderer::Remap(float valueToRemap, float min, float max) const

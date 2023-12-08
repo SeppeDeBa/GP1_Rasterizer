@@ -75,6 +75,10 @@ namespace dae
 		Mesh m_Mesh{};
 		//Textures:
 		Texture* m_pTexture{};
+		Texture* m_pNormalMap{};
+		Texture* m_pSpecularMap{};
+		Texture* m_pPhongExponentMap{};//also called Glossiness map
+		
 
 		//utility functions:
 		void RenderTri(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
@@ -93,6 +97,7 @@ namespace dae
 	
 
 		//week 3
+		//got kind of stuck, fully reworking in final version. Frustum culling works, rendering did not
 		void WeekThree();
 		//week 3 helper functions
 		void VertexNDCToRaster(Vertex_Out& vertex);
@@ -100,5 +105,44 @@ namespace dae
 		void InitMesh();
 		bool isOutsideFrustum(const Vertex_Out& vertex) const;
 		bool isInFrustum(const Vertex_Out& vertex) const;
+
+
+
+
+		//shading and final hand in variables
+		void RenderTriangleFinalVersion(const Vertex_Out& v0, const Vertex_Out& v1, const Vertex_Out& v2) const;
+
+
+
+		bool m_UseNormalMap{ true };
+		void ToggleNormalMap() { m_UseNormalMap = !m_UseNormalMap; };
+		bool m_Rotate{ true };
+		const float m_RotationSpeed{ 1.f };
+		void ToggleRotation() { m_Rotate = !m_Rotate; };
+
+		
+		Light m_MainLight{ 7.f, Vector3{.577f, -.577f, .577f}, ColorRGB{.025f, .025f, .025f} };
+
+		ColorRGB PixelShading(const Vertex_Out& v) const;
+		
+		enum class ShadingMode
+		{
+			ObservedArea,
+			Diffuse,
+			Specular,
+			Combined
+
+		};
+		ShadingMode m_ShadingMode{ ShadingMode::Diffuse };
+
+
+
+
+		//slide 12
+		const float PhongShininess{ 25.f };
+		ColorRGB Phong(float specularity, float exp, const Vector3& l, const Vector3& v, const Vector3& n) const;
+		void FinalVersion();
+		
+
 	};
 }
